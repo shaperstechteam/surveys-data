@@ -1,0 +1,101 @@
+{
+  "source": "C:\\Users\\FSC\\Downloads\\properties-viewer\\migration\\legacy-survey-migration\\source\\merged_properties_final.csv",
+  "rows": 7398,
+  "columns": 96,
+  "surveyStatus": {
+    "REVIEW": 7230,
+    "READY_WITH_WARNINGS": 148,
+    "READY": 20
+  },
+  "contacts": {
+    "MIGRATE_PHONE_NULL": 4724,
+    "MIGRATE": 1758,
+    "HOLD": 916
+  },
+  "contactStatus": {
+    "VALID_NO_PHONE": 4724,
+    "VALID": 1758,
+    "REVIEW_CP_SEMANTICS": 787,
+    "INVALID_NAME": 103,
+    "REVIEW_MULTI_PHONE": 26
+  },
+  "attachments": 15214,
+  "attachmentSource": {
+    "Pictures": 9280,
+    "Videos": 3829,
+    "Backup_Documents": 2105
+  },
+  "attachmentType": {
+    "IMAGE": 10041,
+    "VIDEO": 3977,
+    "OTHER": 1196
+  },
+  "attachmentStatus": {
+    "READY": 9457,
+    "REVIEW": 3228,
+    "HOLD": 2529
+  },
+  "coordinates": {
+    "valid": 7313,
+    "missing": 85,
+    "invalid": 0
+  },
+  "propertyType": {
+    "mapped": 312,
+    "unresolved": 7086
+  },
+  "duplicates": {
+    "members": 20,
+    "groups": 10
+  },
+  "areaSources": {
+    "Areas_In_Karachi": 2291,
+    "Map_Search_Address": 621,
+    "Areas_In_Lahore": 1759,
+    "Areas_In_Islamabad": 1423,
+    "Areas_In_Rawalpindi": 585,
+    "(none)": 49,
+    "Market_Area_114": 528,
+    "Market_Area_117": 142
+  },
+  "availabilityStatus": {
+    "active": 7398
+  },
+  "propertyStatus": {
+    "VACANT": 6896,
+    "(blank)": 118,
+    "RENTED": 384
+  },
+  "propertyStatusConflicts": 353,
+  "userMatch": {
+    "UNMATCHED": 4678,
+    "MATCH_SEED_CANDIDATE": 2720
+  },
+  "floors": {
+    "withSlots": 2023,
+    "highest": 11,
+    "floor4plus": 168,
+    "floor9plus": 1
+  },
+  "classifications": {
+    "MIGRATION_METADATA_ONLY": 1,
+    "RAW_ONLY_SYSTEM_METADATA": 19,
+    "IMPORT_TO_SURVEY": 30,
+    "IMPORT_TO_SURVEY_CONTACT": 2,
+    "IMPORT_TO_USER_RELATION": 1,
+    "RAW_ONLY_REDUNDANT": 2,
+    "IMPORT_TO_SURVEY_JSON": 34,
+    "UNMAPPED_BUSINESS_DATA": 4,
+    "IMPORT_TO_ATTACHMENTS": 3
+  },
+  "issues": 22811,
+  "decisions": 32,
+  "sheet00": {
+    "survey": 69,
+    "new": 12,
+    "contact": 8,
+    "raw": 22,
+    "pending": 4
+  },
+  "output": "C:\\Users\\FSC\\Downloads\\properties-viewer\\migration\\legacy-survey-migration\\legacy-survey-migration-7398.xlsx"
+}
