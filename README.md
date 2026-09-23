@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-# surveys-data
-=======
 # Property Records Viewer (React + Vite)
 
 Search and browse ~7,400 commercial property records in one UI.
@@ -46,4 +43,3 @@ properties-viewer/
   vite.config.js
   index.html
 ```
->>>>>>> 98ca22d (Initial surveys data extraction scripts)

@@ -1,0 +1,13 @@
+# Regenerated on every run of the generators / validators — not source data.
+generation-summary.json
+validation-report.json
+final-clean-summary.json
+final-clean-validation-report.json
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Excel lock files and the audit generator's locked-file fallback output
+~$*.xlsx
+legacy-survey-migration-7398-approved.xlsx
