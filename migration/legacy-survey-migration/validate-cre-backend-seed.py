@@ -14,6 +14,7 @@ import sys
 
 sys.dont_write_bytecode = True
 
+import importlib.util  # noqa: E402
 import json  # noqa: E402
 import re  # noqa: E402
 from collections import Counter  # noqa: E402
@@ -121,12 +122,33 @@ def main():
                   f"{lid}: createdById {r['createdById']!r} is not an email")
         check(blank(r["createdAt"]) or isinstance(r["createdAt"], datetime), f"{lid}: createdAt not a timestamp")
 
-    # every kept value equals the final clean workbook, row by row on legacySurveyId
+    # every kept value equals the final clean workbook, row by row on legacySurveyId;
+    # zipCode is the only column allowed to differ (city-level default added)
     _, c_surveys = read(clean, "01_Surveys")
     cmap = {r["legacySurveyId"]: r for r in c_surveys}
     check(set(ids) == set(cmap), "legacySurveyId set differs from final clean workbook")
-    diff = Counter(c for r in surveys for c in SURVEY_COLUMNS if r[c] != cmap[r["legacySurveyId"]][c])
+    diff = Counter(c for r in surveys for c in SURVEY_COLUMNS
+                   if c != "zipCode" and r[c] != cmap[r["legacySurveyId"]][c])
     check(not diff, f"01_Surveys values differ from final clean: {dict(diff)}")
+
+    # zipCode rules
+    spec = importlib.util.spec_from_file_location("seedgen", HERE / "generate-cre-backend-seed.py")
+    gen = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gen)
+    zip_stats = Counter()
+    for r in surveys:
+        lid, z, before = r["legacySurveyId"], r["zipCode"], cmap[r["legacySurveyId"]]["zipCode"]
+        if not blank(before):
+            check(z == before, f"{lid}: existing zipCode {before!r} was overwritten")
+            zip_stats["preserved"] += 1
+            continue
+        expected_zip = gen.city_zip(r["city"])
+        check(z == expected_zip, f"{lid}: zipCode {z!r} != city-level code {expected_zip!r} for {r['city']!r}")
+        if not blank(z):
+            check(isinstance(z, str) and re.fullmatch(r"\d{5}", z), f"{lid}: zipCode {z!r} is not a 5-digit string")
+            zip_stats["inserted"] += 1
+        else:
+            zip_stats["blank"] += 1
 
     # ------------------------------------------------ contacts / attachments
     survey_ids = set(ids)
@@ -161,6 +183,7 @@ def main():
         "surveyColumnList": s_head,
         "removedFieldsAbsent": {f: f not in s_head for f in FORBIDDEN},
         "jsonCellsParsed": dict(json_ok),
+        "zipCode": dict(zip_stats),
         "createdById": {"populated": len(created_by), "blank": len(surveys) - len(created_by),
                         "distinctEmails": len(set(created_by))},
         "seedExceptionsByReason": dict(Counter(e["reason"] for e in exc).most_common()),

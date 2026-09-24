@@ -18,7 +18,8 @@ Writes:
 The seed Survey sheet drops askingAmount, possession, survey, advance, security,
 gracePeriod, increment, agreementPeriod and surveyDate. Their historical values
 stay in the final clean and audit workbooks. Every other value is copied exactly,
-row for row by legacySurveyId. Nothing is imported or uploaded.
+row for row by legacySurveyId, except that a blank zipCode receives the city-level
+default postal code (CITY_ZIP) as text. Nothing is imported or uploaded.
 """
 from __future__ import annotations
 
@@ -58,6 +59,91 @@ SEED_SURVEY_FIELDS = [
     "neighboringBusinessIds", "submittedAt",
 ]
 SURVEY_HEADERS = ["legacySurveyId"] + SEED_SURVEY_FIELDS
+
+# City-level DEFAULT postal code (main GPO / main delivery office), not the exact
+# neighbourhood code. Source: Pakistan Post "Post Code Directory of Delivery Post
+# Offices" (pakpost.gov.pk/images/national post code directory.pdf); the office
+# named here is the directory entry the code was taken from. Keys are matched after
+# trimming and case-folding the city; the city text itself is never changed.
+# Deliberately unmapped: Swat (a district, not one city), rawat and Mumtaz City
+# (no matching directory entry).
+CITY_ZIP = {
+    "lahore": ("54000", "LAHORE GPO"),
+    "islamabad": ("44000", "ISLAMABAD GPO"),
+    "rawalpindi": ("46000", "RAWALPINDI GPO"),
+    "karachi": ("74200", "KARACHI GPO"),
+    "faisalabad": ("38000", "FAISALABAD GPO"),
+    "peshawar": ("25000", "PESHAWAR GPO"),
+    "jhelum": ("49600", "JHELUM GPO"),
+    "gujranwala": ("52250", "GUJRANWALA GPO"),
+    "gujrat": ("50700", "GUJRAT GPO"),
+    "sialkot": ("51310", "SIALKOT GPO"),
+    "multan": ("60000", "MULTAN GPO"),
+    "mirpur ajk": ("10250", "MIRPUR GPO (Azad Kashmir)"),
+    "abbottabad": ("22010", "ABBOTTABAD GPO"),
+    "sargodha": ("40100", "SARGODHA GPO"),
+    "wah cantt.": ("47040", "WAH CANTT. GPO"),
+    "mardan": ("23200", "MARDAN GPO"),
+    "hyderabad": ("71000", "HYDERABAD GPO"),
+    "mandi bahauddin": ("50400", "MANDI BAHAUDDIN GPO"),
+    "kasur": ("55050", "KASUR GPO"),
+    "rahim yar khan": ("64200", "RAHIMYAR KHAN GPO"),
+    "sahiwal": ("57000", "SAHIWAL GPO"),
+    "sukkur": ("65200", "SUKKUR GPO"),
+    "murree": ("47150", "MURREE GPO"),
+    "attock": ("43600", "ATTOCK GPO"),
+    "sheikhupura": ("39350", "QILA SHEIKHUPURA GPO"),
+    "okara": ("56300", "OKARA GPO"),
+    "haripur": ("22620", "HARIPUR GPO"),
+    "bahawalpur": ("63100", "BAHAWALPUR GPO"),
+    "quetta": ("87300", "QUETTA GPO"),
+    "muzaffarabad": ("13100", "MUZAFFARABAD GPO"),
+    "dera ghazi khan": ("32200", "DERA GHAZI KHAN GPO"),
+    "daska": ("51010", "DASKA"),
+    "narowal": ("51600", "NAROWAL GPO"),
+    "vehari": ("61100", "VEHARI GPO"),
+    "burewala": ("61010", "BUREWALA"),
+    "chakwal": ("48800", "CHAKWAL GPO"),
+    "hafizabad": ("52110", "HAFIZ ABAD"),
+    "wazirabad": ("52000", "WAZIRABAD"),
+    "jhang": ("35200", "JHANG GPO"),
+    "taxila": ("47080", "TAXILA"),
+    "wah": ("47000", "WAH"),
+    "mianwali": ("42200", "MIANWALI GPO"),
+    "fateh jang": ("43350", "FATEH JANG"),
+    "muridke": ("39000", "MURIDKE"),
+    "kharian": ("50090", "KHARIAN CITY"),
+    "lalamusa": ("50200", "LALA MUSA"),
+    "bahawalnagar": ("62300", "BAHAWAL NAGAR GPO"),
+    "lodhran": ("59320", "LODHRAN"),
+    "toba tek singh": ("36050", "TOBA TAKE SINGH GPO"),
+    "khanewal": ("58150", "KHANEWAL GPO"),
+    "gujar khan": ("47850", "GUJAR KHAN GPO"),
+    "mirpur khas": ("69000", "MIRPUR KHAS GPO"),
+    "dina": ("49400", "DINA"),
+    "mansehra": ("21300", "MANSEHRA GPO"),
+    "layyah": ("31200", "LAYYAH GPO"),
+    "sarai alamgir": ("50000", "SARAI ALAMGIR"),
+    "chiniot": ("35400", "CHINIOT"),
+    "pir mahal": ("36300", "PIR MAHAL"),
+    "dara adam khel": ("26100", "DARA ADAM KHEL"),
+    "hazro": ("43440", "HAZRO"),
+    "arifwala": ("57450", "ARIF WALA"),
+    "dinga": ("50280", "DINGA"),
+    "bannu": ("28100", "BANNU GPO"),
+    "phalia": ("50430", "PHALIA"),
+    "joharabad": ("41200", "JAUHAR ABAD"),
+    "hattar": ("43394", "HATTAR"),
+    "nowshera": ("24100", "NOWSHERA GPO"),
+    "ali pur chatha": ("52080", "ALI PUR CHATHA"),
+}
+
+
+def city_zip(city):
+    if city is None or not str(city).strip():
+        return None
+    hit = CITY_ZIP.get(str(city).strip().casefold())
+    return hit[0] if hit else None
 EXCEPTION_HEADERS = ["entity", "legacySurveyId", "field", "rawValue", "normalizedValue",
                      "reason", "severity", "notes"]
 
@@ -92,6 +178,10 @@ def build():
     if len(surveys) != 7398:
         raise SystemExit(f"expected 7,398 surveys, found {len(surveys)}")
     seed_surveys = [{h: r[h] for h in SURVEY_HEADERS} for r in surveys]
+    # zipCode: keep any existing value; otherwise the city-level default (as text)
+    for r in seed_surveys:
+        if r["zipCode"] in (None, ""):
+            r["zipCode"] = city_zip(r["city"])
 
     # ------------------------------------------------ seed exceptions
     seed_exc = []
@@ -131,6 +221,13 @@ def build():
             f"Contact phones are raw legacy text; {reasons['CONTACT_PHONE_INCOMPLETE_OR_INVALID']:,} are "
             f"incomplete/invalid and {reasons['CONTACT_MULTIPLE_PHONES']:,} hold several numbers. "
             "Importer must normalise or accept as-is")
+    unmapped = Counter(str(r["city"]).strip() for r in seed_surveys
+                       if r["zipCode"] is None and r["city"] not in (None, ""))
+    no_city = sum(1 for r in seed_surveys if r["city"] in (None, ""))
+    dataset("zipCode", None, "ZIPCODE_CITY_LEVEL_DEFAULT", "LOW",
+            "zipCode is the city's main GPO/delivery-office code from the Pakistan Post directory, not the "
+            f"exact neighbourhood code. Left blank: {no_city} surveys with no city; unmapped cities "
+            + ", ".join(f"{c} ({n})" for c, n in unmapped.most_common()))
     dataset("attachments", str(att_excluded), "ATTACHMENTS_NOT_IN_MANIFEST", "MEDIUM",
             f"{att_excluded:,} legacy file references are not in 03_Attachments (placeholder, unverified, "
             "unsupported or unavailable). Manifest files still need upload to S3 before AttachmentRecords exist")
