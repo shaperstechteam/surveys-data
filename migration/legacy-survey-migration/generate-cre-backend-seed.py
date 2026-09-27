@@ -42,6 +42,11 @@ used only as a last-resort SurveyFloor dimension recovery for single-floor surve
 whose stated area already matches the covered-size calculation; ambiguous
 (multi-floor) or mismatched cases are left null and flagged instead. Nothing is
 imported or uploaded.
+
+neighboringBusinesses (was marketDetails.nearbyCompetitors) is reshaped from final clean's
+{"nearbyCompetitors": [...]} object to a bare JSON array of names for the seed; final clean
+keeps marketDetails as the object-shaped historical record. neighboringBusinessIds is dropped
+from the seed entirely - the Survey schema no longer has that column.
 """
 from __future__ import annotations
 
@@ -84,9 +89,9 @@ SEED_SURVEY_FIELDS = [
     "surveyDate",
     "financialIncome", "financialExpenses", "financialMetrics", "occupancySurvey", "leaseSurvey",
     "utilityDetails", "units", "siteDetails", "buildingCondition", "environmentalDetails",
-    "legalDetails", "legalDocumentChecklist", "marketDetails", "attachments",
+    "legalDetails", "legalDocumentChecklist", "neighboringBusinesses", "attachments",
     "createdById", "updatedById", "createdAt", "updatedAt", "freshSurveyCount",
-    "neighboringBusinessIds", "submittedAt",
+    "submittedAt",
 ]
 SURVEY_HEADERS = ["legacySurveyId"] + SEED_SURVEY_FIELDS
 
@@ -307,7 +312,8 @@ def build():
 
     NEW_FIELDS = ("landArea", "landAreaUnit", "landFrontageFt", "landDepthFt", "utilityPhase",
                  "sanctionedLoadKva", "transformerAvailable", "transformerCapacityKva", "advanceAmount",
-                 "securityDepositAmount", "possessionTerms", "legalDocumentChecklist")
+                 "securityDepositAmount", "possessionTerms", "legalDocumentChecklist",
+                 "neighboringBusinesses")
     required = ["legacySurveyId"] + [f for f in SEED_SURVEY_FIELDS if f not in NEW_FIELDS]
     missing = [f for f in required if f not in s_head]
     if missing:
@@ -501,6 +507,11 @@ def build():
                     f"{len(measured)}/{len(physical)} floors have a measured area (partial sum "
                     f"{partial_sum:g}); legacy grossBuildingArea/numberOfFloors kept as-is")
 
+        # -------------------------------------------------- neighboringBusinesses (was marketDetails.nearbyCompetitors)
+        raw_market = r.get("marketDetails")
+        row["neighboringBusinesses"] = (json.dumps(json.loads(raw_market)["nearbyCompetitors"])
+                                        if raw_market else None)
+
         seed_surveys.append(row)
 
     # ------------------------------------------------ carried-over seed exceptions
@@ -617,9 +628,9 @@ def write(surveys, floors, c_head, contacts, a_head, attachments, seed_exc):
     wb.remove(wb.active)
     write_sheet(wb, "01_Surveys", SURVEY_HEADERS, surveys,
                 widths={"address": 32, "locationCoordinates": 34, "area": 28, "ownerName": 26,
-                        "units": 48, "marketDetails": 48, "createdById": 30, "createdAt": 20,
+                        "units": 48, "neighboringBusinesses": 48, "createdById": 30, "createdAt": 20,
                         "possessionTerms": 40},
-                wrap={"address", "locationCoordinates", "units", "marketDetails", "possessionTerms"})
+                wrap={"address", "locationCoordinates", "units", "neighboringBusinesses", "possessionTerms"})
     write_sheet(wb, "02_Survey_Floors", FLOOR_HEADERS, floors,
                 widths={"floorName": 22, "notes": 60})
     write_sheet(wb, "03_Survey_Contacts", c_head, contacts,

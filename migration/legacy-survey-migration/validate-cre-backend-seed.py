@@ -41,9 +41,9 @@ availabilityStatus propertyStatus availableFor
 advanceAmount securityDepositAmount possessionTerms
 surveyDate
 financialIncome financialExpenses financialMetrics occupancySurvey leaseSurvey utilityDetails units
-siteDetails buildingCondition environmentalDetails legalDetails legalDocumentChecklist marketDetails
+siteDetails buildingCondition environmentalDetails legalDetails legalDocumentChecklist neighboringBusinesses
 attachments
-createdById updatedById createdAt updatedAt freshSurveyCount neighboringBusinessIds submittedAt""".split()
+createdById updatedById createdAt updatedAt freshSurveyCount submittedAt""".split()
 # NOTE: matches the CRE-oriented names requested for this workbook (floorWidthFt/floorDepthFt/
 # floorAreaSqFt). If the actual Prisma SurveyFloor model still uses lengthFt/widthFt/areaSqFt,
 # reconcile before import - this validator only checks internal consistency, not the live schema.
@@ -71,7 +71,7 @@ NOT_ALLOWED = {
 JSON_COLUMNS = ["locationCoordinates", "financialIncome", "financialExpenses", "financialMetrics",
                 "occupancySurvey", "leaseSurvey", "utilityDetails", "units", "siteDetails",
                 "buildingCondition", "environmentalDetails", "legalDetails", "legalDocumentChecklist",
-                "marketDetails", "attachments", "neighboringBusinessIds"]
+                "neighboringBusinesses", "attachments"]
 EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 FLOOR_CODE_RE = re.compile(r"^(B[12]|LG|UG|G|M|RF|\d{1,2}F)$")
 
@@ -118,7 +118,7 @@ def main():
     # ------------------------------------------------ surveys
     s_head, surveys = data["01_Surveys"]
     ids = [r["legacySurveyId"] for r in surveys]
-    check(len(SURVEY_COLUMNS) == 68 and len(s_head) == 68, f"01_Surveys has {len(s_head)} columns, expected 68")
+    check(len(SURVEY_COLUMNS) == 67 and len(s_head) == 67, f"01_Surveys has {len(s_head)} columns, expected 67")
     check(len(surveys) == 7398, f"01_Surveys rows={len(surveys)}")
     check(len(set(ids)) == 7398, "legacySurveyId not unique")
     absent = [f for f in FORBIDDEN if f in s_head]
@@ -133,7 +133,6 @@ def main():
                     json_ok[c] += 1
                 except (TypeError, ValueError):
                     errors.append(f"{lid}: {c} is not valid JSON")
-        check(r["neighboringBusinessIds"] == "[]", f"{lid}: neighboringBusinessIds != []")
         if not blank(r["createdById"]):
             check(isinstance(r["createdById"], str) and EMAIL.match(r["createdById"]),
                   f"{lid}: createdById {r['createdById']!r} is not an email")
@@ -159,7 +158,7 @@ def main():
         "legacySurveyId", "zipCode", "landArea", "landAreaUnit", "landFrontageFt", "landDepthFt",
         "grossBuildingArea", "numberOfFloors", "advanceAmount", "securityDepositAmount",
         "possessionTerms", "surveyDate", "utilityPhase", "sanctionedLoadKva", "transformerAvailable",
-        "transformerCapacityKva", "legalDocumentChecklist", "units",
+        "transformerCapacityKva", "legalDocumentChecklist", "units", "neighboringBusinesses",
     }
     UNCHANGED_COLUMNS = [c for c in SURVEY_COLUMNS if c not in DERIVED_COLUMNS]
     diff = Counter(c for r in surveys for c in UNCHANGED_COLUMNS if r[c] != cmap[r["legacySurveyId"]][c])
@@ -190,6 +189,18 @@ def main():
         if not blank(clean_row["plotArea"]):
             check(r["landArea"] == clean_row["plotArea"], f"{lid}: landArea != legacy plotArea")
             check(r["landAreaUnit"] == clean_row["areaUnit"], f"{lid}: landAreaUnit != legacy areaUnit")
+
+    # neighboringBusinesses (seed) is a bare array; final clean's marketDetails holds
+    # {"nearbyCompetitors": [...]}. Same names, either shape.
+    for r in surveys:
+        lid, clean_row = r["legacySurveyId"], cmap[r["legacySurveyId"]]
+        seed_neighbors, clean_market = r["neighboringBusinesses"], clean_row["marketDetails"]
+        check(blank(seed_neighbors) == blank(clean_market), f"{lid}: neighboringBusinesses presence differs from final clean")
+        if not blank(seed_neighbors):
+            seed_list = json.loads(seed_neighbors)
+            clean_list = json.loads(clean_market)["nearbyCompetitors"]
+            check(isinstance(seed_list, list), f"{lid}: neighboringBusinesses is not a bare JSON array")
+            check(seed_list == clean_list, f"{lid}: neighboringBusinesses names differ from final clean nearbyCompetitors")
 
     # advanceAmount/securityDepositAmount: only present when the legacy text is a bare number
     commercial_stats = Counter()
