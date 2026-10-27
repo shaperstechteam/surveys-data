@@ -1,6 +1,6 @@
 # Property Records Viewer (React + Vite)
 
-Search and browse ~7,400 commercial property records in one UI.
+Search and browse ~7,600 commercial property records in one UI.
 
 ## Features
 
